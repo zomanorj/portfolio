@@ -3,6 +3,7 @@ import { Mail, Send } from "lucide-react";
 import { useState } from "react";
 import ScrollReveal from "./ScrollReveal";
 import { profile } from "../data/content";
+import emailjs from "@emailjs/browser";
 
 const GithubIcon = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" {...p}>
@@ -27,13 +28,64 @@ const iconMap: Record<string, React.ElementType> = {
   mail: Mail,
 };
 
+
 export default function Contact() {
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const sendEmail = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
-    setSent(true);
-    setTimeout(() => setSent(false), 3000);
+
+    setLoading(true);
+
+    try {
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        {
+            from_name: formData.name,
+            from_email: formData.email,
+            subject: formData.subject,
+            message: formData.message,
+        },
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+        );
+
+      setSent(true);
+
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+
+      setTimeout(() => setSent(false), 3000);
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de l'envoi.");
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -105,24 +157,46 @@ export default function Contact() {
           {/* Right — Form */}
           <ScrollReveal delay={0.1} className="md:col-span-3">
             <form
-              onSubmit={handleSubmit}
+              onSubmit={sendEmail}
               className="glass relative h-full overflow-hidden rounded-3xl p-8 md:p-10"
             >
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <Field label="Nom" placeholder="Votre nom" />
-                <Field label="Email" type="email" placeholder="vous@email.com" />
+                <Field
+                    label="Nom"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Votre nom"
+                    />
+                <Field
+                    label="Email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="vous@email.com"
+                />
                 <div className="md:col-span-2">
-                  <Field label="Sujet" placeholder="Stage, freelance, café..." />
+                  <Field
+                    label="Sujet"
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    placeholder="Stage, projet..."
+                   />
                 </div>
                 <div className="md:col-span-2">
                   <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-400">
                     Message
                   </label>
                   <textarea
+                    name="message"
+                    value={formData.message}
+                    onChange={handleChange}
                     rows={5}
                     placeholder="Parlez-moi de votre projet..."
                     className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:border-violet-400/50 focus:bg-white/10 focus:outline-none"
-                  />
+                   />
                 </div>
               </div>
 
@@ -153,10 +227,18 @@ export default function Contact() {
 
 function Field({
   label,
+  name,
+  value,
+  onChange,
   type = "text",
   placeholder,
 }: {
   label: string;
+  name: string;
+  value: string;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => void;
   type?: string;
   placeholder?: string;
 }) {
@@ -165,9 +247,14 @@ function Field({
       <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-400">
         {label}
       </label>
+
       <input
+        name={name}
         type={type}
+        value={value}
+        onChange={onChange}
         placeholder={placeholder}
+        required
         className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:border-violet-400/50 focus:bg-white/10 focus:outline-none"
       />
     </div>
